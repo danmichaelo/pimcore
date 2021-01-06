@@ -28,6 +28,7 @@ use Pimcore\Model\Element\DeepCopy\PimcoreClassDefinitionReplaceFilter;
 use Pimcore\Model\Element\ElementDumpStateInterface;
 use Pimcore\Model\Element\ElementInterface;
 use Pimcore\Model\Element\Service;
+use Pimcore\Model\Exception\VersionLoadException;
 use Pimcore\Model\Version\SetDumpStateFilter;
 use Pimcore\Tool\Serialize;
 
@@ -350,10 +351,11 @@ class Version extends AbstractModel
     }
 
     /**
-     * Object
+     * Load version data from file system.
      *
      * @param bool $renewReferences
      *
+     * @throws VersionLoadException
      * @return mixed
      */
     public function loadData($renewReferences = true)
@@ -383,18 +385,16 @@ class Version extends AbstractModel
         }
 
         if (!$data) {
-            Logger::err('Version: cannot read version data from file system.');
+            Logger::err('Version: cannot read version data from file system, will try to remove version:' . $filePath);
             $this->delete();
 
-            return null;
+            throw new VersionLoadException('Cannot read version data from file system.');
         }
 
         if ($this->getSerialized()) {
             $data = Serialize::unserialize($data);
             if ($data instanceof \__PHP_Incomplete_Class) {
-                Logger::err('Version: cannot read version data from file system because of incompatible class.');
-
-                return null;
+                throw new VersionLoadException('Cannot read version data because of incompatible class definition.');
             }
 
             $data = $this->unmarshalData($data);

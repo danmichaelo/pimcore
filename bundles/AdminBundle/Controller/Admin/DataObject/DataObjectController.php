@@ -1466,23 +1466,28 @@ class DataObjectController extends ElementControllerBase implements KernelContro
 
         $id = (int)$request->get('id');
         $version = Model\Version::getById($id);
-        $object = $version->loadData();
+
+        try {
+            $object = $version->loadData();
+        } catch (Model\Exception\VersionLoadException $err) {
+            return $this->render(
+                'PimcoreAdminBundle:Admin/DataObject/DataObject:previewVersionError.html.php',
+                ['message' => $err->getMessage()],
+            );
+        }
 
         DataObject\AbstractObject::setDoNotRestoreKeyAndPath(false);
 
-        if ($object) {
-            if ($object->isAllowed('versions')) {
-                return $this->render('@PimcoreAdmin/Admin/DataObject/DataObject/previewVersion.html.twig',
-                    [
-                        'object' => $object,
-                        'validLanguages' => Tool::getValidLanguages(),
-                    ]);
-            } else {
-                throw $this->createAccessDeniedException('Permission denied, version id [' . $id . ']');
-            }
-        } else {
-            throw $this->createNotFoundException('Version with id [' . $id . "] doesn't exist");
+        if (!$object->isAllowed('versions')) {
+            throw $this->createAccessDeniedException('Permission denied, version id [' . $id . ']');
         }
+
+        return $this->render('@PimcoreAdmin/Admin/DataObject/DataObject/previewVersion.html.twig',
+            [
+                'object' => $object,
+                'validLanguages' => Tool::getValidLanguages(),
+            ]
+        );
     }
 
     /**
@@ -1504,27 +1509,32 @@ class DataObjectController extends ElementControllerBase implements KernelContro
         $id2 = (int)$to;
 
         $version1 = Model\Version::getById($id1);
-        $object1 = $version1->loadData();
-
         $version2 = Model\Version::getById($id2);
-        $object2 = $version2->loadData();
+
+        try {
+            $object1 = $version1->loadData();
+            $object2 = $version2->loadData();
+        } catch (Model\Exception\VersionLoadException $err) {
+            return $this->render(
+                'PimcoreAdminBundle:Admin/DataObject/DataObject:previewVersionError.html.php',
+                ['message' => $err->getMessage()],
+            );
+        }
 
         DataObject\AbstractObject::setDoNotRestoreKeyAndPath(false);
 
-        if ($object1 && $object2) {
-            if ($object1->isAllowed('versions') && $object2->isAllowed('versions')) {
-                return $this->render('@PimcoreAdmin/Admin/DataObject/DataObject/diffVersions.html.twig',
-                    [
-                        'object1' => $object1,
-                        'object2' => $object2,
-                        'validLanguages' => Tool::getValidLanguages(),
-                    ]);
-            } else {
-                throw $this->createAccessDeniedException('Permission denied, version ids [' . $id1 . ', ' . $id2 . ']');
-            }
-        } else {
-            throw $this->createNotFoundException('Version with ids [' . $id1 . ', ' . $id2 . "] doesn't exist");
+        if (!$object1->isAllowed('versions') || !$object2->isAllowed('versions')) {
+            throw $this->createAccessDeniedException('Permission denied, version ids [' . $id1 . ', ' . $id2 . ']');
         }
+
+        return $this->render(
+            '@PimcoreAdmin/Admin/DataObject/DataObject/diffVersions.html.twig',
+            [
+                'object1' => $object1,
+                'object2' => $object2,
+                'validLanguages' => Tool::getValidLanguages(),
+            ]
+        );
     }
 
     /**

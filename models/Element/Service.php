@@ -42,6 +42,7 @@ use Pimcore\Model\Element\DeepCopy\MarshalMatcher;
 use Pimcore\Model\Element\DeepCopy\PimcoreClassDefinitionMatcher;
 use Pimcore\Model\Element\DeepCopy\PimcoreClassDefinitionReplaceFilter;
 use Pimcore\Model\Element\DeepCopy\UnmarshalMatcher;
+use Pimcore\Model\Exception\VersionLoadException;
 use Pimcore\Model\Tool\TmpStore;
 use Pimcore\Tool;
 use Pimcore\Tool\Serialize;
@@ -759,13 +760,15 @@ class Service extends Model\AbstractModel
      * @param string $key
      *
      * @return mixed
+     * @throws VersionLoadException
      */
     public static function renewReferences($data, $initial = true, $key = null)
     {
         if ($data instanceof \__PHP_Incomplete_Class) {
-            Logger::err(sprintf('Renew References: Cannot read data (%s) of incomplete class.', is_null($key) ? 'not available' : $key));
-
-            return null;
+            throw new VersionLoadException(sprintf(
+                'Renew References: Cannot read version data (%s) because of incompatible class definition.',
+                is_null($key) ? 'not available' : $key
+            ));
         }
 
         if (is_array($data)) {
